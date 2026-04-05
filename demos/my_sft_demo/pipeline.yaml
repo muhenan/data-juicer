@@ -1,0 +1,23 @@
+project_name: 'my-sft-demo'
+dataset_path: './demos/my_sft_demo/raw_sft_data.jsonl'
+np: 1
+text_keys: 'response'   # 用 response 字段做质量判断（也可以改为 instruction）
+
+export_path: './demos/my_sft_demo/output/processed_sft_data.jsonl'
+
+process:
+  # 算子1：过滤 response 太短的样本（"你好！" 这类无效回答）
+  - text_length_filter:
+      min_len: 20
+      max_len: 2000
+
+  # 算子2：过滤重复率太高的样本（"好好好好好好..." 这类退化回答）
+  - character_repetition_filter:
+      rep_len: 5         # 5字符 n-gram
+      min_ratio: 0.0
+      max_ratio: 0.2     # 超过 20% 的字符属于重复 n-gram 则过滤
+
+  # 算子3：只保留中文数据（过滤英文条目）
+  - language_id_score_filter:
+      lang: 'zh'
+      min_score: 0.5
