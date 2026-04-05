@@ -1,0 +1,13 @@
+project_name: 'my-dedup-demo'
+dataset_path: './demos/my_dedup_demo/raw_data.jsonl'
+np: 1
+text_keys: 'response'
+
+export_path: './demos/my_dedup_demo/output/deduped_data.jsonl'
+
+process:
+  - document_minhash_deduplicator:
+      tokenization: 'character'   # 按字符分词
+      window_size: 5              # n-gram 窗口大小
+      num_permutations: 128       # 签名数量，越大越准
+      jaccard_threshold: 0.4      # 相似度超过 70% 视为重复
