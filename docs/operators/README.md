@@ -52,3 +52,48 @@
 | `calibrate_response_mapper` | 用 LLM 改写 response |
 | `generate_qa_from_text_mapper` | 从原始文本自动生成 QA 对 |
 | `generate_qa_from_examples_mapper` | 基于示例生成 QA 对 |
+
+---
+
+## DPO / GRPO 专项
+
+| 算子 | 类型 | 说明 |
+|---|---|---|
+| `pair_preference_mapper` | Mapper | 给定 chosen response，调用 LLM 自动生成对立的 rejected response，直接产出 DPO 训练对 |
+| `human_preference_annotation_mapper` | Mapper | 对接 Label Studio，将候选答案对推给人工标注，结果自动写回 chosen/rejected 字段 |
+| `instruction_following_difficulty_filter` | Filter | 基于 IFD 分数过滤数据（见下方原理说明） |
+
+---
+
+## IFD 算法原理（instruction_following_difficulty_filter）
+
+**论文**：[arxiv:2308.12032](https://arxiv.org/abs/2308.12032)
+
+**核心公式**：
+
+```
+IFD = loss(response | query) / loss(response | 无 query)
+```
+
+用一个 HuggingFace CausalLM 模型（默认 Qwen2.5-0.5B）做推理，**不训练，只做 forward pass**，计算模型预测 response token 的 cross-entropy loss。
+
+- **分母** `loss(无 query)`：模型凭空预测这段 response 的难度，作为基准线
+- **分子** `loss(有 query)`：模型看到 query 之后预测 response 的难度
+
+**IFD 越低越好**：
+
+```
+IFD 低（分子小）：有了 query，response 变得好预测
+               → query 和 response 强相关 → 高质量数据，保留
+
+IFD 高（接近1）：有没有 query 对预测 response 难度差不多
+               → query 形同虚设 → 低质量数据，过滤
+```
+
+**使用方式**：只需设 `max_score`，过滤 IFD 过高的数据：
+
+```yaml
+- instruction_following_difficulty_filter:
+    min_score: 0.0
+    max_score: 0.7
+```
