@@ -26,26 +26,29 @@
 |---|---|---|
 | `language_id_score_filter` | Filter | 基于 fasttext 的语言识别，只保留目标语言样本 |
 | `perplexity_filter` | Filter | 基于 KenLM 困惑度过滤语言质量差的文本 |
-| `minhash_deduplicator` | Deduplicator | 模糊去重，能识别近似重复，比精确匹配更强 |
-| `document_deduplicator` | Deduplicator | 基于哈希的精确去重 |
+| `document_minhash_deduplicator` | Deduplicator | MinHash + LSH 模糊去重，能识别近似重复 |
+| `document_deduplicator` | Deduplicator | 基于 MD5 哈希的精确去重 |
 
 ---
 
 ## 基于大模型（效果最强，速度最慢，适合 SFT/DPO）
 
-| 算子 | 类型 | 说明 |
-|---|---|---|
-| `reward_model_scorer` | Mapper | 用 reward model 对每条样本打分 |
-| `llm_judge_filter` | Filter | 调用 LLM（如 GPT/Qwen）判断样本质量 |
-| `ifd_scorer` | Mapper | 计算指令跟随难度（IFD），过滤过于简单的样本 |
-| `diversity_sampler` | Selector | 对 embedding 聚类后均衡采样，防止话题分布偏斜 |
+### Filter
 
----
+| 算子 | 说明 |
+|---|---|
+| `llm_quality_score_filter` | LLM 给数据打质量分，过滤低质量样本 |
+| `llm_difficulty_score_filter` | LLM 评估指令难度，过滤过于简单的样本 |
+| `llm_task_relevance_filter` | LLM 判断数据是否与目标任务相关 |
+| `llm_analysis_filter` | LLM 综合分析过滤 |
+| `llm_perplexity_filter` | 用 LLM 算困惑度，比 KenLM 更准但更慢 |
 
-## DPO 专项
+### Mapper
 
-| 算子 | 类型 | 说明 |
-|---|---|---|
-| `reward_gap_filter` | Filter | 过滤 chosen/rejected 分差过小的对，分差太小则没有学习信号 |
-| `response_consistency_filter` | Filter | 检测标注错误，如 chosen 质量反而低于 rejected |
-| `prompt_deduplicator` | Deduplicator | 对 prompt 去重，防止某类问题过多导致过拟合 |
+| 算子 | 说明 |
+|---|---|
+| `calibrate_qa_mapper` | 用 LLM 校正/改写 QA 对 |
+| `calibrate_query_mapper` | 用 LLM 改写 query |
+| `calibrate_response_mapper` | 用 LLM 改写 response |
+| `generate_qa_from_text_mapper` | 从原始文本自动生成 QA 对 |
+| `generate_qa_from_examples_mapper` | 基于示例生成 QA 对 |
